@@ -1,0 +1,8 @@
+{
+  "schema_version":1,"seed":1337,"units":"SI",
+  "buildings":[
+    {"id":"tower_a","name":"Tower A","origin":{"x":-9,"y":0,"z":0},"floors":8,"width":6,"depth":6,"floor_height":3.2},
+    {"id":"tower_b","name":"Tower B","origin":{"x":0,"y":0,"z":-5},"floors":6,"width":7,"depth":6,"floor_height":3.0},
+    {"id":"tower_c","name":"Tower C","origin":{"x":9,"y":0,"z":2},"floors":5,"width":5,"depth":5,"floor_height":3.0}
+  ]
+}

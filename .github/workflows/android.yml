@@ -13,6 +13,9 @@ jobs:
       - uses: android-actions/setup-android@v4
         with:
           packages: platform-tools
+      - uses: gradle/actions/setup-gradle@v5
+        with:
+          gradle-version: '9.5'
       - run: chmod +x gradlew
       - run: ./gradlew :app:assembleDebug
       - uses: actions/upload-artifact@v4

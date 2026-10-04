@@ -1,0 +1,2 @@
+namespace PhysicsCity.Buildings;
+public sealed class StructuralJoint { public required string Id{get;init;} public required string A{get;init;} public required string B{get;init;} public required string Type{get;init;} public required double StiffnessNPerM{get;init;} public required double ShearStrengthPa{get;init;} public required double TensionStrengthPa{get;init;} public required double RotationLimitRad{get;init;} public double ShearStressPa{get;set;} public double TensionStressPa{get;set;} public bool Failed{get;set;} }

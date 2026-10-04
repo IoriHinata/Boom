@@ -1,0 +1,23 @@
+package com.iorihinata.boom
+import android.opengl.GLES20
+import android.opengl.GLSurfaceView
+import android.opengl.Matrix
+import kotlin.math.max
+class BoomRenderer(private val world:StructuralWorld):GLSurfaceView.Renderer{
+@Volatile var running=false;@Volatile var debug=true;@Volatile var selectedBuilding=0
+private val p=FloatArray(16);private val v=FloatArray(16);private val m=FloatArray(16);private val vp=FloatArray(16);private val mvp=FloatArray(16)
+private var program=0;private var pos=0;private var color=0;private var last=System.nanoTime();private var yaw=42f;private var pitch=28f;private var distance=32f
+private val cube=floatArrayOf(-1f,-1f,-1f,1f,-1f,-1f,1f,1f,-1f,-1f,1f,-1f,-1f,-1f,1f,1f,-1f,1f,1f,1f,1f,-1f,1f,1f)
+private val idx=shortArrayOf(0,1,2,2,3,0,4,6,5,6,4,7,0,4,5,5,1,0,3,2,6,6,7,3,1,5,6,6,2,1,0,3,7,7,4,0)
+private val ib=java.nio.ByteBuffer.allocateDirect(idx.size*2).order(java.nio.ByteOrder.nativeOrder()).asShortBuffer().apply{put(idx);position(0)}
+private val vb=java.nio.ByteBuffer.allocateDirect(cube.size*4).order(java.nio.ByteOrder.nativeOrder()).asFloatBuffer().apply{put(cube);position(0)}
+override fun onSurfaceCreated(g:javax.microedition.khronos.opengles.GL10?,c:javax.microedition.khronos.egl.EGLConfig?){GLES20.glClearColor(.035f,.045f,.06f,1f);GLES20.glEnable(GLES20.GL_DEPTH_TEST);program=prog("attribute vec3 a;uniform mat4 m;void main(){gl_Position=m*vec4(a,1.0);}","precision mediump float;uniform vec4 c;void main(){gl_FragColor=c;}");pos=GLES20.glGetAttribLocation(program,"a");color=GLES20.glGetUniformLocation(program,"c")}
+override fun onSurfaceChanged(g:javax.microedition.khronos.opengles.GL10?,w:Int,h:Int){GLES20.glViewport(0,0,w,h);Matrix.perspectiveM(p,0,48f,w.toFloat()/max(1,h),.1f,250f)}
+override fun onDrawFrame(g:javax.microedition.khronos.opengles.GL10?){val now=System.nanoTime();val dt=((now-last)/1e9f).coerceIn(0f,.033f);last=now;if(running)world.update(dt);GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT or GLES20.GL_DEPTH_BUFFER_BIT)
+val t=world.buildings.getOrNull(selectedBuilding)?.origin?:V3(0f,4f,0f);val ry=Math.toRadians(yaw.toDouble());val rp=Math.toRadians(pitch.toDouble());val cx=t.x+kotlin.math.sin(ry).toFloat()*distance;val cz=t.z+kotlin.math.cos(ry).toFloat()*distance;val cy=t.y+kotlin.math.sin(rp).toFloat()*distance*.55f+8f
+Matrix.setLookAtM(v,0,cx,cy,cz,t.x,t.y+5f,t.z,0f,1f,0f);Matrix.multiplyMM(vp,0,p,0,v,0);cube(0f,-1.25f,0f,38f,.3f,30f,V3(0f,0f,0f),floatArrayOf(.12f,.15f,.18f,1f));world.buildings.forEachIndexed{bi,b->b.elements.forEach{draw(it,bi==selectedBuilding)}}}
+private fun draw(e:StructuralElement,sel:Boolean){val u=e.stressPa/max(1f,e.strength);val c=when{e.failed->floatArrayOf(.92f,.16f,.07f,1f);u>.7f->floatArrayOf(.96f,.55f,.08f,1f);e.type==ElementType.COLUMN&&sel->floatArrayOf(.28f,.72f,1f,1f);e.type==ElementType.COLUMN->floatArrayOf(.48f,.55f,.62f,1f);e.type==ElementType.SLAB->floatArrayOf(.62f,.65f,.7f,1f);e.type==ElementType.ROOF->floatArrayOf(.35f,.42f,.5f,1f);e.type==ElementType.FOUNDATION->floatArrayOf(.25f,.28f,.32f,1f);else->floatArrayOf(.5f,.58f,.65f,1f)};cube(e.position.x,e.position.y,e.position.z,e.size.x,e.size.y,e.size.z,e.rotation,c)}
+private fun cube(x:Float,y:Float,z:Float,sx:Float,sy:Float,sz:Float,r:V3,c:FloatArray){Matrix.setIdentityM(m,0);Matrix.translateM(m,0,x,y,z);Matrix.rotateM(m,0,r.x,1f,0f,0f);Matrix.rotateM(m,0,r.y,0f,1f,0f);Matrix.rotateM(m,0,r.z,0f,0f,1f);Matrix.scaleM(m,0,sx*.5f,sy*.5f,sz*.5f);Matrix.multiplyMM(mvp,0,vp,0,m,0);GLES20.glUseProgram(program);vb.position(0);GLES20.glEnableVertexAttribArray(pos);GLES20.glVertexAttribPointer(pos,3,GLES20.GL_FLOAT,false,0,vb);GLES20.glUniformMatrix4fv(GLES20.glGetUniformLocation(program,"m"),1,false,mvp,0);GLES20.glUniform4fv(color,1,c,0);ib.position(0);GLES20.glDrawElements(GLES20.GL_TRIANGLES,idx.size,GLES20.GL_UNSIGNED_SHORT,ib);GLES20.glDisableVertexAttribArray(pos)}
+fun orbit(dx:Float,dy:Float){yaw+=dx*.35f;pitch=(pitch-dy*.2f).coerceIn(8f,78f)};fun zoom(s:Float){distance=(distance/s).coerceIn(10f,80f)};fun selectNext(){selectedBuilding=(selectedBuilding+1)%max(1,world.buildings.size)}
+}
+private fun prog(v:String,f:String):Int{fun sh(t:Int,s:String):Int{val x=GLES20.glCreateShader(t);GLES20.glShaderSource(x,s);GLES20.glCompileShader(x);val ok=IntArray(1);GLES20.glGetShaderiv(x,GLES20.GL_COMPILE_STATUS,ok,0);if(ok[0]==0)throw IllegalStateException(GLES20.glGetShaderInfoLog(x));return x};val p=GLES20.glCreateProgram();GLES20.glAttachShader(p,sh(GLES20.GL_VERTEX_SHADER,v));GLES20.glAttachShader(p,sh(GLES20.GL_FRAGMENT_SHADER,f));GLES20.glLinkProgram(p);val ok=IntArray(1);GLES20.glGetProgramiv(p,GLES20.GL_LINK_STATUS,ok,0);if(ok[0]==0)throw IllegalStateException(GLES20.glGetProgramInfoLog(p));return p}

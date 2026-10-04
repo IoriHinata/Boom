@@ -1,0 +1,3 @@
+using PhysicsCity.Core;
+namespace PhysicsCity.Buildings;
+public sealed class StructuralElement { public required string Id{get;init;} public required string Type{get;init;} public required string MaterialId{get;init;} public required double MassKg{get;init;} public required Vec3 Position{get;set;} public required Vec3 RotationRad{get;set;} public required Vec3 DimensionsM{get;init;} public required StructuralRole Role{get;init;} public string? RoomId{get;init;} public int FloorId{get;init;} public double StressPa{get;set;} public double Strain{get;set;} public FailureState FailureState{get;set;}=FailureState.Intact; public HashSet<string> Connections{get;}=new(); public HashSet<string> Supports{get;}=new(); public HashSet<string> SupportedElements{get;}=new(); }
